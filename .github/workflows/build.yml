@@ -18,10 +18,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 30
-    env:
-      YOUTUBE_IPA: $RUNNER_TEMP/YouTube_decrypted.ipa
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,6 +29,9 @@ jobs:
 
       - name: Check AppleTV SDK
         run: xcrun --sdk appletvos --show-sdk-path
+
+      - name: Set environment
+        run: echo "YOUTUBE_IPA=${{ runner.temp }}/youtube.ipa" >> $GITHUB_ENV
 
       - name: Download decrypted YouTube IPA
         env:
