@@ -527,7 +527,7 @@ def patch_ipa(in_path, out_path, enable_printf_logs=False):
     # Replace only app binary inside IPA; preserve all other entries.
     with zipfile.ZipFile(in_path, "r") as zin:
         infos = zin.infolist()
-        bin_info = next((i for i in infos if i.filename.endswith("/YouTubeUnstable")), None)
+        bin_info = next((i for i in infos if i.filename.endswith("/YouTube")), None)
         if not bin_info:
             raise ValueError("YouTubeUnstable binary not found in IPA")
 
