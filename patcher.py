@@ -189,6 +189,7 @@ def parse_macho_info(data):
     stubs = binary.get_section("__stubs")
     text_seg = next((s for s in binary.segments if s.name == "__TEXT"), None)
     dysym = next((c for c in binary.commands if type(c).__name__ == "DynamicSymbolCommand"), None)
+    last_sec = max(text_seg.sections, key=lambda s: s.offset + s.size)
     if not text or not stubs or not text_seg or not dysym:
         raise ValueError("required Mach-O structures missing (__TEXT/__text/__stubs/dysymtab)")
 
@@ -199,6 +200,8 @@ def parse_macho_info(data):
         "text_seg_va": text_seg.virtual_address,
         "text_seg_off": text_seg.file_offset,
         "header_end": 32 + binary.header.sizeof_cmds,
+        "tail_start": last_sec.offset + last_sec.size,
+        "tail_end": text_seg.file_offset + text_seg.file_size,
         "stubs": stubs,
         "dysym": dysym,
     }
@@ -418,10 +421,17 @@ def patch_binary(data, enable_printf_logs=False):
     start, end = info["header_end"], info["text_off"]
     if start >= end:
         raise ValueError("no __TEXT padding available for stubs")
-    alloc = Allocator(start, end)
+    header_alloc = Allocator(info["header_end"], info["text_off"])
+    tail_alloc = Allocator(info["tail_start"], info["tail_end"])
+    
+    def alloc_bytes(size, align=4):
+        try:
+            return header_alloc.alloc(size, align)
+        except ValueError:
+            return tail_alloc.alloc(size, align)
 
     def put(blob, align=4):
-        off = alloc.alloc(len(blob), align)
+        off = alloc_bytes(len(blob), align)
         data[off:off + len(blob)] = blob
         return off
 
@@ -479,7 +489,7 @@ def patch_binary(data, enable_printf_logs=False):
     for p in resolved:
         stubs[p["name"]] = {"len": len(build_stub(p["kind"], 0, addrs, p["orig"], enable_printf_logs))}
     for p in resolved:
-        off = alloc.alloc(stubs[p["name"]]["len"], 4)
+        off = alloc_bytes(stubs[p["name"]]["len"], 4)
         stubs[p["name"]] |= {"off": off, "va": f2v(off)}
     for p in resolved:
         stubs[p["name"]]["blob"] = build_stub(p["kind"], stubs[p["name"]]["va"], addrs, p["orig"], enable_printf_logs)
