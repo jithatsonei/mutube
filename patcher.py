@@ -455,7 +455,7 @@ def patch_binary(data, enable_printf_logs=False):
             "log_csp_entry": put(LOG_CSP_ENTRY + b"\0"),
             "log_csp_inject": put(LOG_CSP_INJECT + b"\0"),
         }
-    alloc.alloc(0, 16)
+    alloc_bytes(0, 16)
 
     f2v = lambda off: info["text_seg_va"] + (off - info["text_seg_off"])
     addrs = {k: f2v(v) for k, v in offs.items()}
